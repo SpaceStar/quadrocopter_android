@@ -30,8 +30,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         initViews();
 
-        mTcpClient = new TcpClient(message -> Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show());
-        new Thread(() -> mTcpClient.run()).start();
+        mTcpClient = new TcpClient();
 
         mSignalTimer = new Timer();
         mSignalTimer.scheduleAtFixedRate(new TimerTask() {

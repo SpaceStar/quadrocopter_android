@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Quadrocopter</string>
+    <string name="main_on">On</string>
+    <string name="main_off">Off</string>
+</resources>

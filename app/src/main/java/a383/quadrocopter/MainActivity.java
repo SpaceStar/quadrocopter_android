@@ -5,12 +5,14 @@ import android.support.v7.app.AppCompatActivity;
 import android.widget.Button;
 import android.widget.SeekBar;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import java.util.Timer;
 import java.util.TimerTask;
 
 public class MainActivity extends AppCompatActivity {
+    public static final String SERVER_IP = "192.168.1.1";
+    public static final int SERVER_PORT = 8888;
+
     public static final int MINIMUM = 3;
     public static final int MAXIMUM = 100;
     public static final long PERIOD = 50;
@@ -20,7 +22,7 @@ public class MainActivity extends AppCompatActivity {
     protected TextView mNumberText;
 
     private boolean mIsOn;
-    private TcpClient mTcpClient;
+    private UdpClient mUdpClient;
 
     private Timer mSignalTimer;
 
@@ -30,16 +32,16 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         initViews();
 
-        mTcpClient = new TcpClient();
+        mUdpClient = new UdpClient(SERVER_IP, SERVER_PORT);
 
         mSignalTimer = new Timer();
         mSignalTimer.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
                 if (mIsOn) {
-                    mTcpClient.sendMessage(String.valueOf(mSeekBar.getProgress() + MINIMUM));
+                    mUdpClient.sendMessage(String.valueOf(mSeekBar.getProgress() + MINIMUM));
                 } else {
-                    mTcpClient.sendMessage("0");
+                    mUdpClient.sendMessage("0");
                 }
             }
         }, 0, PERIOD);
@@ -82,8 +84,8 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (mTcpClient != null) {
-            mTcpClient.stopClient();
+        if (mUdpClient != null) {
+            mUdpClient.stopClient();
         }
         if (mSignalTimer != null) {
             mSignalTimer.cancel();

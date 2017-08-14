@@ -1,5 +1,6 @@
 package a383.quadrocopter;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.widget.Button;
@@ -20,6 +21,7 @@ public class MainActivity extends AppCompatActivity {
     protected Button mOnOffButton;
     protected SeekBar mSeekBar;
     protected TextView mNumberText;
+    protected Button mControllerButton;
 
     private boolean mIsOn;
     private UdpClient mUdpClient;
@@ -51,6 +53,7 @@ public class MainActivity extends AppCompatActivity {
         mOnOffButton = ((Button) findViewById(R.id.main_startButton));
         mSeekBar = ((SeekBar) findViewById(R.id.main_seekBar));
         mNumberText = ((TextView) findViewById(R.id.main_number));
+        mControllerButton = ((Button) findViewById(R.id.main_controllerButton));
 
         mOnOffButton.setOnClickListener(v -> {
             mIsOn = !mIsOn;
@@ -78,6 +81,10 @@ public class MainActivity extends AppCompatActivity {
             public void onStopTrackingTouch(SeekBar seekBar) {
 
             }
+        });
+
+        mControllerButton.setOnClickListener(v -> {
+            startActivity(new Intent(MainActivity.this, ControllerActivity.class));
         });
     }
 

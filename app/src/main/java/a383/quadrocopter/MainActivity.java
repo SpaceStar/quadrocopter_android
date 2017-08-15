@@ -1,11 +1,14 @@
 package a383.quadrocopter;
 
-import android.content.Intent;
 import android.os.Bundle;
+import android.support.v4.content.ContextCompat;
+import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.SeekBar;
-import android.widget.TextView;
 
 import java.util.Timer;
 import java.util.TimerTask;
@@ -14,25 +17,40 @@ public class MainActivity extends AppCompatActivity {
     public static final String SERVER_IP = "192.168.1.1";
     public static final int SERVER_PORT = 8888;
 
-    public static final int MINIMUM = 3;
-    public static final int MAXIMUM = 100;
     public static final long PERIOD = 50;
+    public static final int STATE_SIZE = 5;
 
-    protected Button mOnOffButton;
     protected SeekBar mSeekBar;
-    protected TextView mNumberText;
-    protected Button mControllerButton;
+    protected Button mArmButton;
+    protected Button mStopButton;
+    protected Button llButton;
+    protected Button lrButton;
+    protected Button rlButton;
+    protected Button rrButton;
+    protected Button ruButton;
+    protected Button rdButton;
 
-    private boolean mIsOn;
     private UdpClient mUdpClient;
-
     private Timer mSignalTimer;
+
+    byte state[];
+
+    private enum channel {
+        GAS, YAW, PITCH, ROLL, OPTIONS
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_controller);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        ActionBar actionBar = getSupportActionBar();
+        if (actionBar != null) {
+            actionBar.hide();
+        }
         initViews();
+
+        state = new byte[STATE_SIZE];
 
         mUdpClient = new UdpClient(SERVER_IP, SERVER_PORT);
 
@@ -40,36 +58,29 @@ public class MainActivity extends AppCompatActivity {
         mSignalTimer.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
-                if (mIsOn) {
-                    mUdpClient.sendMessage(String.valueOf(mSeekBar.getProgress() + MINIMUM));
-                } else {
-                    mUdpClient.sendMessage("0");
-                }
+                mUdpClient.sendBytes(state);
             }
         }, 0, PERIOD);
     }
 
     private void initViews() {
-        mOnOffButton = ((Button) findViewById(R.id.main_startButton));
-        mSeekBar = ((SeekBar) findViewById(R.id.main_seekBar));
-        mNumberText = ((TextView) findViewById(R.id.main_number));
-        mControllerButton = ((Button) findViewById(R.id.main_controllerButton));
+        mSeekBar = ((SeekBar) findViewById(R.id.controller_seekbar));
+        mArmButton = ((Button) findViewById(R.id.controller_button_u));
+        mStopButton = ((Button) findViewById(R.id.controller_button_d));
+        llButton = ((Button) findViewById(R.id.controller_button_ll));
+        lrButton = ((Button) findViewById(R.id.controller_button_lr));
+        rlButton = ((Button) findViewById(R.id.controller_button_rl));
+        rrButton = ((Button) findViewById(R.id.controller_button_rr));
+        ruButton = ((Button) findViewById(R.id.controller_button_ru));
+        rdButton = ((Button) findViewById(R.id.controller_button_rd));
 
-        mOnOffButton.setOnClickListener(v -> {
-            mIsOn = !mIsOn;
+        mSeekBar.setMax(255);
+        mSeekBar.setEnabled(false);
 
-            if (mIsOn) {
-                mOnOffButton.setText(R.string.main_off);
-            } else {
-                mOnOffButton.setText(R.string.main_on);
-            }
-        });
-
-        mSeekBar.setMax(MAXIMUM - MINIMUM);
         mSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
-            public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
-                mNumberText.setText(String.valueOf(i + MINIMUM));
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                state[channel.GAS.ordinal()] = (byte)progress;
             }
 
             @Override
@@ -83,9 +94,95 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        mControllerButton.setOnClickListener(v -> {
-            startActivity(new Intent(MainActivity.this, ControllerActivity.class));
+        mArmButton.setOnLongClickListener(v -> {
+            boolean check = true;
+            for (int i = 0; i < STATE_SIZE - 1; i++)
+                if (state[i] != 0)
+                    check = false;
+
+            if (check) {
+                state[channel.OPTIONS.ordinal()] ^= 1;
+
+                if ((state[channel.OPTIONS.ordinal()] & 1) == 1) {
+                    mArmButton.setText(R.string.arm_off);
+                    mArmButton.setBackgroundColor(ContextCompat.getColor(this, android.R.color.holo_red_light));
+                    mSeekBar.setEnabled(true);
+                } else {
+                    mArmButton.setText(R.string.arm_on);
+                    mArmButton.setBackgroundColor(ContextCompat.getColor(this, android.R.color.holo_green_light));
+                    mSeekBar.setEnabled(false);
+                }
+            }
+
+            return  true;
         });
+
+        mStopButton.setOnTouchListener((v, event) -> {
+            if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                mSeekBar.setProgress(0);
+
+                state[channel.OPTIONS.ordinal()] &= ~1;
+                mArmButton.setText(R.string.arm_on);
+                mArmButton.setBackgroundColor(ContextCompat.getColor(this, android.R.color.holo_green_light));
+                mSeekBar.setEnabled(false);
+            }
+
+            return true;
+        });
+
+        View.OnTouchListener onTouchListener = (v, event) -> {
+            Button view = (Button) v;
+            channel ch;
+            byte value;
+
+            switch (view.getId()) {
+                case R.id.controller_button_ll:
+                    ch = channel.YAW;
+                    value = -128;
+                    break;
+                case R.id.controller_button_lr:
+                    ch = channel.YAW;
+                    value = 127;
+                    break;
+                case R.id.controller_button_rl:
+                    ch = channel.ROLL;
+                    value = -128;
+                    break;
+                case R.id.controller_button_rr:
+                    ch = channel.ROLL;
+                    value = 127;
+                    break;
+                case R.id.controller_button_ru:
+                    ch = channel.PITCH;
+                    value = 127;
+                    break;
+                case R.id.controller_button_rd:
+                    ch = channel.PITCH;
+                    value = -128;
+                    break;
+                default:
+                    ch = null;
+                    value = 0;
+            }
+
+            switch (event.getAction()) {
+                case MotionEvent.ACTION_DOWN:
+                    state[ch.ordinal()] += value;
+                    break;
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    state[ch.ordinal()] -= value;
+            }
+
+            return true;
+        };
+
+        llButton.setOnTouchListener(onTouchListener);
+        lrButton.setOnTouchListener(onTouchListener);
+        rlButton.setOnTouchListener(onTouchListener);
+        rrButton.setOnTouchListener(onTouchListener);
+        ruButton.setOnTouchListener(onTouchListener);
+        rdButton.setOnTouchListener(onTouchListener);
     }
 
     @Override

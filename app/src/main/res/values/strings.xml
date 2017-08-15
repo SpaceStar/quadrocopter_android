@@ -1,6 +1,6 @@
 <resources>
     <string name="app_name">Quadrocopter</string>
-    <string name="main_on">On</string>
-    <string name="main_off">Off</string>
-    <string name="main_controller">Controller</string>
+    <string name="arm_on">Arm</string>
+    <string name="arm_off">Disarm</string>
+    <string name="button_stop">Stop</string>
 </resources>

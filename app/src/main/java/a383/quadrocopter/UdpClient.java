@@ -35,9 +35,12 @@ public class UdpClient {
      * @param message text entered by client
      */
     public void sendMessage(String message) {
+        sendBytes(message.getBytes());
+    }
+
+    public void sendBytes(byte[] data) {
         if (socket != null) {
             try {
-                byte[] data = message.getBytes();
                 DatagramPacket packet = new DatagramPacket(data, data.length, SERVER_IP, SERVER_PORT);
                 socket.send(packet);
             } catch (IOException e) {

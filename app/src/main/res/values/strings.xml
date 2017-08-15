@@ -3,4 +3,6 @@
     <string name="arm_on">Arm</string>
     <string name="arm_off">Disarm</string>
     <string name="button_stop">Stop</string>
+    <string name="wifi_ssid">quad</string>
+    <string name="wifi_pass">1357924680</string>
 </resources>

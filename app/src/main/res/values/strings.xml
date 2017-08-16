@@ -5,4 +5,5 @@
     <string name="button_stop">Stop</string>
     <string name="wifi_ssid">quad</string>
     <string name="wifi_pass">1357924680</string>
+    <string name="state_no_connection">No connection</string>
 </resources>

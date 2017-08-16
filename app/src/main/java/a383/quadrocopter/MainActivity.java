@@ -2,6 +2,7 @@ package a383.quadrocopter;
 
 import android.content.Context;
 import android.net.wifi.WifiConfiguration;
+import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
@@ -12,6 +13,7 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.SeekBar;
+import android.widget.TextView;
 
 import java.util.Timer;
 import java.util.TimerTask;
@@ -20,9 +22,11 @@ public class MainActivity extends AppCompatActivity {
     public static final String SERVER_IP = "192.168.1.1";
     public static final int SERVER_PORT = 8888;
 
-    public static final long PERIOD = 50;
+    public static final long UDP_PERIOD = 50;
+    public static final long WIFI_PERIOD = 500;
     public static final int STATE_SIZE = 5;
 
+    protected TextView mStateText;
     protected SeekBar mSeekBar;
     protected Button mArmButton;
     protected Button mStopButton;
@@ -34,7 +38,8 @@ public class MainActivity extends AppCompatActivity {
     protected Button rdButton;
 
     private UdpClient mUdpClient;
-    private Timer mSignalTimer;
+    private Timer mUdpTimer;
+    private Timer mWifiTimer;
 
     byte state[];
 
@@ -58,16 +63,31 @@ public class MainActivity extends AppCompatActivity {
 
         mUdpClient = new UdpClient(SERVER_IP, SERVER_PORT);
 
-        mSignalTimer = new Timer();
-        mSignalTimer.scheduleAtFixedRate(new TimerTask() {
+        mUdpTimer = new Timer();
+        mUdpTimer.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
                 mUdpClient.sendBytes(state);
             }
-        }, 0, PERIOD);
+        }, 0, UDP_PERIOD);
+
+        mWifiTimer = new Timer();
+        mWifiTimer.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+                WifiInfo currentWifi = wifiManager.getConnectionInfo();
+                if ((currentWifi.getNetworkId() != -1) && (currentWifi.getSSID().equals("\"" + getApplicationContext().getResources().getString(R.string.wifi_ssid) + "\""))) {
+                    runOnUiThread(() -> mStateText.setText(String.valueOf(currentWifi.getRssi())));
+                } else {
+                    runOnUiThread(() -> mStateText.setText(R.string.state_no_connection));
+                }
+            }
+        }, 0, WIFI_PERIOD);
     }
 
     private void initViews() {
+        mStateText = ((TextView) findViewById(R.id.controller_signal_state));
         mSeekBar = ((SeekBar) findViewById(R.id.controller_seekbar));
         mArmButton = ((Button) findViewById(R.id.controller_button_u));
         mStopButton = ((Button) findViewById(R.id.controller_button_d));
@@ -210,8 +230,11 @@ public class MainActivity extends AppCompatActivity {
         if (mUdpClient != null) {
             mUdpClient.stopClient();
         }
-        if (mSignalTimer != null) {
-            mSignalTimer.cancel();
+        if (mUdpTimer != null) {
+            mUdpTimer.cancel();
+        }
+        if (mWifiTimer != null) {
+            mWifiTimer.cancel();
         }
     }
 }

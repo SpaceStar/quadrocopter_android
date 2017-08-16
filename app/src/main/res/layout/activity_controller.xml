@@ -77,4 +77,12 @@
         android:id="@+id/controller_button_rl"
         android:layout_width="64dp"
         android:layout_height="64dp" />
+
+    <TextView
+        android:id="@+id/controller_signal_state"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentRight="true"
+        android:text="@string/state_no_connection"/>
 </RelativeLayout>

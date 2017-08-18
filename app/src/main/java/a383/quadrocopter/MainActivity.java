@@ -26,6 +26,8 @@ public class MainActivity extends AppCompatActivity {
     public static final long WIFI_PERIOD = 500;
     public static final int STATE_SIZE = 5;
 
+    private boolean mWifiDisable;
+
     protected TextView mStateText;
     protected SeekBar mSeekBar;
     protected Button mArmButton;
@@ -40,6 +42,7 @@ public class MainActivity extends AppCompatActivity {
     private UdpClient mUdpClient;
     private Timer mUdpTimer;
     private Timer mWifiTimer;
+    private WifiManager mWifiManager;
 
     byte state[];
 
@@ -75,8 +78,7 @@ public class MainActivity extends AppCompatActivity {
         mWifiTimer.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
-                WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
-                WifiInfo currentWifi = wifiManager.getConnectionInfo();
+                WifiInfo currentWifi = mWifiManager.getConnectionInfo();
                 if ((currentWifi.getNetworkId() != -1) && (currentWifi.getSSID().equals("\"" + getApplicationContext().getResources().getString(R.string.wifi_ssid) + "\""))) {
                     runOnUiThread(() -> mStateText.setText(String.valueOf(currentWifi.getRssi())));
                 } else {
@@ -214,14 +216,16 @@ public class MainActivity extends AppCompatActivity {
         conf.SSID = "\"" + getApplicationContext().getResources().getString(R.string.wifi_ssid) + "\"";
         conf.preSharedKey = "\"" + getApplicationContext().getResources().getString(R.string.wifi_pass) + "\"";
 
-        WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
-        if (!wifiManager.isWifiEnabled())
-            wifiManager.setWifiEnabled(true);
-        int networkId = wifiManager.addNetwork(conf);
+        mWifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+        if (!mWifiManager.isWifiEnabled()) {
+            mWifiDisable = true;
+            mWifiManager.setWifiEnabled(true);
+        }
+        int networkId = mWifiManager.addNetwork(conf);
 
-        wifiManager.disconnect();
-        wifiManager.enableNetwork(networkId, true);
-        wifiManager.reconnect();
+        mWifiManager.disconnect();
+        mWifiManager.enableNetwork(networkId, true);
+        mWifiManager.reconnect();
     }
 
     @Override
@@ -235,6 +239,9 @@ public class MainActivity extends AppCompatActivity {
         }
         if (mWifiTimer != null) {
             mWifiTimer.cancel();
+        }
+        if (mWifiDisable) {
+            mWifiManager.setWifiEnabled(false);
         }
     }
 }

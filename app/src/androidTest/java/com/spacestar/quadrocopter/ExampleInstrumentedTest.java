@@ -1,4 +1,4 @@
-package a383.quadrocopter;
+package com.spacestar.quadrocopter;
 
 import android.content.Context;
 import android.support.test.InstrumentationRegistry;
@@ -21,6 +21,6 @@ public class ExampleInstrumentedTest {
         // Context of the app under test.
         Context appContext = InstrumentationRegistry.getTargetContext();
 
-        assertEquals("a383.quadrocopter", appContext.getPackageName());
+        assertEquals("com.spacestar.quadrocopter", appContext.getPackageName());
     }
 }

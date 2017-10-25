@@ -1,4 +1,4 @@
-package a383.quadrocopter.widget;
+package com.spacestar.quadrocopter.widget;
 
 import android.content.Context;
 import android.graphics.Canvas;

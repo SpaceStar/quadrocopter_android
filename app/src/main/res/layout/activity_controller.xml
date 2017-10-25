@@ -2,8 +2,7 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:padding="16dp"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical">
+    android:layout_height="match_parent">
 
     <Button
         android:id="@+id/controller_button_ll"
@@ -11,7 +10,7 @@
         android:layout_width="64dp"
         android:layout_height="64dp" />
 
-    <a383.quadrocopter.widget.VerticalSeekBar
+    <com.spacestar.quadrocopter.widget.VerticalSeekBar
         android:id="@+id/controller_seekbar"
         android:layout_toRightOf="@id/controller_button_ll"
         android:layout_width="wrap_content"

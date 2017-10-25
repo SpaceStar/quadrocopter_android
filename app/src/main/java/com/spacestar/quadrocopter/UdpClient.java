@@ -1,4 +1,4 @@
-package a383.quadrocopter;
+package com.spacestar.quadrocopter;
 
 import android.util.Log;
 

@@ -1,6 +1,8 @@
 package com.spacestar.quadrocopter;
 
 import android.content.Context;
+import android.content.res.ColorStateList;
+import android.graphics.Color;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
@@ -26,9 +28,15 @@ public class MainActivity extends AppCompatActivity {
     public static final long WIFI_PERIOD = 500;
     public static final int STATE_SIZE = 5;
 
+    public static final double ADC_CONST = 0.01278;
+    public static final double MAX_VOLTAGE = 12.9;
+    public static final double MIN_VOLTAGE = 9;
+    public static final double SMALL_VOLTAGE = 9.9;
+
     private boolean mWifiDisable;
 
-    protected TextView mStateText;
+    protected TextView mWifiStateText;
+    protected TextView mBatteryStateText;
     protected SeekBar mSeekBar;
     protected Button mArmButton;
     protected Button mStopButton;
@@ -38,6 +46,8 @@ public class MainActivity extends AppCompatActivity {
     protected Button rrButton;
     protected Button ruButton;
     protected Button rdButton;
+
+    private ColorStateList defaultTextColor;
 
     private UdpClient mUdpClient;
     private Timer mUdpTimer;
@@ -64,7 +74,23 @@ public class MainActivity extends AppCompatActivity {
 
         state = new byte[STATE_SIZE];
 
-        mUdpClient = new UdpClient(SERVER_IP, SERVER_PORT);
+        mUdpClient = new UdpClient(SERVER_IP, SERVER_PORT, STATE_SIZE) {
+            @Override
+            public void onReceive(byte[] data, int size) {
+                int value = (0xff & data[0]) * 4 + (0xff & data[1]) / 64;
+                double voltage = value * ADC_CONST;
+                String batteryState;
+                if (voltage < (2 * MIN_VOLTAGE - SMALL_VOLTAGE))
+                    batteryState = getApplicationContext().getResources().getString(R.string.state_no_battery);
+                else
+                    batteryState = String.valueOf((int)((voltage - MIN_VOLTAGE) / (MAX_VOLTAGE - MIN_VOLTAGE) * 100)) + '%';
+                mBatteryStateText.setText(batteryState);
+                if (voltage <= SMALL_VOLTAGE)
+                    mBatteryStateText.setTextColor(Color.RED);
+                else
+                    mBatteryStateText.setTextColor(defaultTextColor);
+            }
+        };
 
         mUdpTimer = new Timer();
         mUdpTimer.scheduleAtFixedRate(new TimerTask() {
@@ -80,28 +106,31 @@ public class MainActivity extends AppCompatActivity {
             public void run() {
                 WifiInfo currentWifi = mWifiManager.getConnectionInfo();
                 if ((currentWifi.getNetworkId() != -1) && (currentWifi.getSSID().equals("\"" + getApplicationContext().getResources().getString(R.string.wifi_ssid) + "\""))) {
-                    runOnUiThread(() -> mStateText.setText(String.valueOf(currentWifi.getRssi())));
+                    runOnUiThread(() -> mWifiStateText.setText(String.valueOf(currentWifi.getRssi())));
                 } else {
-                    runOnUiThread(() -> mStateText.setText(R.string.state_no_connection));
+                    runOnUiThread(() -> mWifiStateText.setText(R.string.state_no_connection));
                 }
             }
         }, 0, WIFI_PERIOD);
     }
 
     private void initViews() {
-        mStateText = ((TextView) findViewById(R.id.controller_signal_state));
-        mSeekBar = ((SeekBar) findViewById(R.id.controller_seekbar));
-        mArmButton = ((Button) findViewById(R.id.controller_button_u));
-        mStopButton = ((Button) findViewById(R.id.controller_button_d));
-        llButton = ((Button) findViewById(R.id.controller_button_ll));
-        lrButton = ((Button) findViewById(R.id.controller_button_lr));
-        rlButton = ((Button) findViewById(R.id.controller_button_rl));
-        rrButton = ((Button) findViewById(R.id.controller_button_rr));
-        ruButton = ((Button) findViewById(R.id.controller_button_ru));
-        rdButton = ((Button) findViewById(R.id.controller_button_rd));
+        mWifiStateText = findViewById(R.id.controller_signal_state);
+        mBatteryStateText = findViewById(R.id.controller_battery_state);
+        mSeekBar = findViewById(R.id.controller_seekbar);
+        mArmButton = findViewById(R.id.controller_button_u);
+        mStopButton = findViewById(R.id.controller_button_d);
+        llButton = findViewById(R.id.controller_button_ll);
+        lrButton = findViewById(R.id.controller_button_lr);
+        rlButton = findViewById(R.id.controller_button_rl);
+        rrButton = findViewById(R.id.controller_button_rr);
+        ruButton = findViewById(R.id.controller_button_ru);
+        rdButton = findViewById(R.id.controller_button_rd);
 
         mSeekBar.setMax(255);
         mSeekBar.setEnabled(false);
+
+        defaultTextColor = mBatteryStateText.getTextColors();
 
         mSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override

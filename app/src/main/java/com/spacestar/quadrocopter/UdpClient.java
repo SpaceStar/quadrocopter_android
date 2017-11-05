@@ -1,32 +1,37 @@
 package com.spacestar.quadrocopter;
 
+import android.annotation.SuppressLint;
+import android.os.AsyncTask;
 import android.util.Log;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.SocketException;
 import java.net.UnknownHostException;
 
-public class UdpClient {
+public abstract class UdpClient {
 
     private InetAddress SERVER_IP; //server IP address
     private int SERVER_PORT;
+    private int PACKET_MAX_LENGTH;
     // UDP socket
     private DatagramSocket socket;
 
     /**
      * Constructor of the class
      */
-    public UdpClient(String ServerIP, int ServerPort) {
+    public UdpClient(String ServerIP, int ServerPort, int InputMaxLength) {
         try {
             SERVER_IP = InetAddress.getByName(ServerIP);
             SERVER_PORT = ServerPort;
+            PACKET_MAX_LENGTH = InputMaxLength;
+
+            start_client();
         } catch (UnknownHostException e) {
             e.printStackTrace();
         }
-
-        new Thread(() -> start_client()).start();
     }
 
     /**
@@ -61,16 +66,42 @@ public class UdpClient {
     }
 
     private void start_client() {
-        try {
-            Log.d("UDP Client", "C: Connecting...");
+        @SuppressLint("StaticFieldLeak")
+        AsyncTask<Void, Integer, Void> asyncTask = new AsyncTask<Void, Integer, Void>() {
+            private byte[] data;
 
-            //create a socket to make the connection with the server
-            socket = new DatagramSocket();
+            @Override
+            protected Void doInBackground(Void... voids) {
+                data = new byte[PACKET_MAX_LENGTH];
+                DatagramPacket packet = new DatagramPacket(data, data.length);
 
-            Log.d("UDP Client", "C: Connected");
-        } catch (Exception e) {
-            Log.e("UDP", "C: Error", e);
-        }
+                try {
+                    //connect
+                    socket = new DatagramSocket();
+                    //receive
+                    while (socket != null)
+                    {
+                        socket.receive(packet);
+                        publishProgress(packet.getLength());
+                    }
+                } catch (SocketException e) {
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+                return null;
+            }
+
+            @Override
+            protected void onProgressUpdate(Integer... values) {
+                super.onProgressUpdate(values);
+                onReceive(data, values[0]);
+            }
+        };
+        asyncTask.execute();
     }
+
+    abstract public void onReceive(byte[] data, int size);
 
 }

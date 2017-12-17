@@ -50,7 +50,7 @@
             android:layout_height="64dp" />
 
         <Button
-            android:id="@+id/controller_button_u"
+            android:id="@+id/controller_button_arm"
             android:text="@string/arm_on"
             android:background="@android:color/holo_green_light"
             android:layout_centerHorizontal="true"
@@ -59,7 +59,7 @@
 
         <Button
             android:layout_alignParentBottom="true"
-            android:id="@+id/controller_button_d"
+            android:id="@+id/controller_button_stop"
             android:text="@string/button_stop"
             android:background="@android:color/holo_red_dark"
             android:layout_centerHorizontal="true"

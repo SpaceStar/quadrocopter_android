@@ -1,69 +1,86 @@
-package com.spacestar.quadrocopter;
+package com.spacestar.quadrocopter.screen.controller;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
-import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
+import android.support.annotation.Nullable;
 import android.support.v4.content.ContextCompat;
-import android.support.v7.app.ActionBar;
-import android.support.v7.app.AppCompatActivity;
+import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.WindowManager;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
-import static com.spacestar.quadrocopter.Consts.*;
+import com.spacestar.quadrocopter.R;
+import com.spacestar.quadrocopter.UdpClient;
+import com.spacestar.quadrocopter.screen.base.BaseFragment;
 
 import java.util.Timer;
 import java.util.TimerTask;
 
-public class MainActivity extends AppCompatActivity {
-    private boolean mWifiDisable;
+import butterknife.BindView;
+import butterknife.ButterKnife;
 
+import static com.spacestar.quadrocopter.Consts.ADC_CONST;
+import static com.spacestar.quadrocopter.Consts.MAX_VOLTAGE;
+import static com.spacestar.quadrocopter.Consts.MIN_VOLTAGE;
+import static com.spacestar.quadrocopter.Consts.SERVER_IP;
+import static com.spacestar.quadrocopter.Consts.SERVER_PORT;
+import static com.spacestar.quadrocopter.Consts.SMALL_VOLTAGE;
+import static com.spacestar.quadrocopter.Consts.STATE_SIZE;
+import static com.spacestar.quadrocopter.Consts.UDP_PERIOD;
+import static com.spacestar.quadrocopter.Consts.WIFI_PERIOD;
+
+public class ControllerFragment extends BaseFragment {
+
+    @BindView(R.id.controller_signal_state)
     protected TextView mWifiStateText;
+    @BindView(R.id.controller_battery_state)
     protected TextView mBatteryStateText;
+    @BindView(R.id.controller_seekbar)
     protected SeekBar mSeekBar;
+    @BindView(R.id.controller_button_arm)
     protected Button mArmButton;
+    @BindView(R.id.controller_button_stop)
     protected Button mStopButton;
-    protected Button llButton;
-    protected Button lrButton;
-    protected Button rlButton;
-    protected Button rrButton;
-    protected Button ruButton;
-    protected Button rdButton;
+    @BindView(R.id.controller_button_ll)
+    protected Button mLlButton;
+    @BindView(R.id.controller_button_lr)
+    protected Button mLrButton;
+    @BindView(R.id.controller_button_rl)
+    protected Button mRlButton;
+    @BindView(R.id.controller_button_rr)
+    protected Button mRrButton;
+    @BindView(R.id.controller_button_ru)
+    protected Button mRuButton;
+    @BindView(R.id.controller_button_rd)
+    protected Button mRdButton;
 
-    private ColorStateList defaultTextColor;
-
+    byte state[] = new byte[STATE_SIZE];
     private UdpClient mUdpClient;
     private Timer mUdpTimer;
     private Timer mWifiTimer;
     private WifiManager mWifiManager;
+    private boolean mWifiDisable;
 
-    byte state[];
-
-    private enum channel {
-        GAS, YAW, PITCH, ROLL, OPTIONS
-    }
-
+    @Nullable
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.fragment_controller);
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        ActionBar actionBar = getSupportActionBar();
-        if (actionBar != null) {
-            actionBar.hide();
-        }
+    public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        View view = inflater.inflate(R.layout.fragment_controller, container, false);
+        ButterKnife.bind(this, view);
         initViews();
         initWifi();
+        initClient();
+        return view;
+    }
 
-        state = new byte[STATE_SIZE];
-
+    private void initClient() {
         mUdpClient = new UdpClient(SERVER_IP, SERVER_PORT, STATE_SIZE) {
             @Override
             public void onReceive(byte[] data, int size) {
@@ -71,14 +88,15 @@ public class MainActivity extends AppCompatActivity {
                 double voltage = value * ADC_CONST;
                 String batteryState;
                 if (voltage < (2 * MIN_VOLTAGE - SMALL_VOLTAGE))
-                    batteryState = getApplicationContext().getResources().getString(R.string.state_no_battery);
+                    batteryState = getContext().getResources().getString(R.string.state_no_battery);
                 else
-                    batteryState = String.valueOf((int)((voltage - MIN_VOLTAGE) / (MAX_VOLTAGE - MIN_VOLTAGE) * 100)) + '%';
+                    batteryState = String.valueOf((int) ((voltage - MIN_VOLTAGE) / (MAX_VOLTAGE - MIN_VOLTAGE) * 100)) + '%';
                 mBatteryStateText.setText(batteryState);
-                if (voltage <= SMALL_VOLTAGE)
+                if (voltage <= SMALL_VOLTAGE) {
                     mBatteryStateText.setTextColor(Color.RED);
-                else
-                    mBatteryStateText.setTextColor(defaultTextColor);
+                } else {
+                    mBatteryStateText.setTextColor(ContextCompat.getColor(getActivity(), R.color.text_color));
+                }
             }
         };
 
@@ -95,37 +113,24 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void run() {
                 WifiInfo currentWifi = mWifiManager.getConnectionInfo();
-                if ((currentWifi.getNetworkId() != -1) && (currentWifi.getSSID().equals("\"" + getApplicationContext().getResources().getString(R.string.wifi_ssid) + "\""))) {
-                    runOnUiThread(() -> mWifiStateText.setText(String.valueOf(currentWifi.getRssi())));
+                if ((currentWifi.getNetworkId() != -1) && (currentWifi.getSSID().equals("\"" + getContext().getResources().getString(R.string.wifi_ssid) + "\""))) {
+                    getActivity().runOnUiThread(() -> mWifiStateText.setText(String.valueOf(currentWifi.getRssi())));
                 } else {
-                    runOnUiThread(() -> mWifiStateText.setText(R.string.state_no_connection));
+                    getActivity().runOnUiThread(() -> mWifiStateText.setText(R.string.state_no_connection));
                 }
             }
         }, 0, WIFI_PERIOD);
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     private void initViews() {
-        mWifiStateText = findViewById(R.id.controller_signal_state);
-        mBatteryStateText = findViewById(R.id.controller_battery_state);
-        mSeekBar = findViewById(R.id.controller_seekbar);
-        mArmButton = findViewById(R.id.controller_button_arm);
-        mStopButton = findViewById(R.id.controller_button_stop);
-        llButton = findViewById(R.id.controller_button_ll);
-        lrButton = findViewById(R.id.controller_button_lr);
-        rlButton = findViewById(R.id.controller_button_rl);
-        rrButton = findViewById(R.id.controller_button_rr);
-        ruButton = findViewById(R.id.controller_button_ru);
-        rdButton = findViewById(R.id.controller_button_rd);
-
         mSeekBar.setMax(255);
         mSeekBar.setEnabled(false);
-
-        defaultTextColor = mBatteryStateText.getTextColors();
 
         mSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                state[channel.GAS.ordinal()] = (byte)progress;
+                state[Channel.GAS.ordinal()] = (byte) progress;
             }
 
             @Override
@@ -146,63 +151,62 @@ public class MainActivity extends AppCompatActivity {
                     check = false;
 
             if (check) {
-                state[channel.OPTIONS.ordinal()] ^= 1;
+                state[Channel.OPTIONS.ordinal()] ^= 1;
 
-                if ((state[channel.OPTIONS.ordinal()] & 1) == 1) {
+                if ((state[Channel.OPTIONS.ordinal()] & 1) == 1) {
                     mArmButton.setText(R.string.arm_off);
-                    mArmButton.setBackgroundColor(ContextCompat.getColor(this, android.R.color.holo_red_light));
+                    mArmButton.setBackgroundColor(ContextCompat.getColor(getActivity(), android.R.color.holo_red_light));
                     mSeekBar.setEnabled(true);
                 } else {
                     mArmButton.setText(R.string.arm_on);
-                    mArmButton.setBackgroundColor(ContextCompat.getColor(this, android.R.color.holo_green_light));
+                    mArmButton.setBackgroundColor(ContextCompat.getColor(getActivity(), android.R.color.holo_green_light));
                     mSeekBar.setEnabled(false);
                 }
             }
 
-            return  true;
+            return true;
         });
 
         mStopButton.setOnTouchListener((v, event) -> {
             if (event.getAction() == MotionEvent.ACTION_DOWN) {
                 mSeekBar.setProgress(0);
 
-                state[channel.OPTIONS.ordinal()] &= ~1;
+                state[Channel.OPTIONS.ordinal()] &= ~1;
                 mArmButton.setText(R.string.arm_on);
-                mArmButton.setBackgroundColor(ContextCompat.getColor(this, android.R.color.holo_green_light));
+                mArmButton.setBackgroundColor(ContextCompat.getColor(getActivity(), android.R.color.holo_green_light));
                 mSeekBar.setEnabled(false);
             }
-
             return true;
         });
 
         View.OnTouchListener onTouchListener = (v, event) -> {
             Button view = (Button) v;
-            channel ch;
+            Channel ch;
             byte value;
 
             switch (view.getId()) {
                 case R.id.controller_button_ll:
-                    ch = channel.YAW;
+                    ch = Channel.YAW;
                     value = -128;
                     break;
                 case R.id.controller_button_lr:
-                    ch = channel.YAW;
+                    ch = Channel.YAW;
                     value = 127;
                     break;
                 case R.id.controller_button_rl:
-                    ch = channel.ROLL;
+                    ch = Channel.ROLL;
                     value = -128;
                     break;
                 case R.id.controller_button_rr:
-                    ch = channel.ROLL;
+                    ch = Channel.ROLL;
                     value = 127;
                     break;
                 case R.id.controller_button_ru:
-                    ch = channel.PITCH;
+                    ch = Channel.PITCH;
                     value = 127;
                     break;
                 case R.id.controller_button_rd:
-                    ch = channel.PITCH;
+                    ch = Channel.PITCH;
                     value = -128;
                     break;
                 default:
@@ -218,24 +222,23 @@ public class MainActivity extends AppCompatActivity {
                 case MotionEvent.ACTION_CANCEL:
                     state[ch.ordinal()] -= value;
             }
-
             return true;
         };
 
-        llButton.setOnTouchListener(onTouchListener);
-        lrButton.setOnTouchListener(onTouchListener);
-        rlButton.setOnTouchListener(onTouchListener);
-        rrButton.setOnTouchListener(onTouchListener);
-        ruButton.setOnTouchListener(onTouchListener);
-        rdButton.setOnTouchListener(onTouchListener);
+        mLlButton.setOnTouchListener(onTouchListener);
+        mLrButton.setOnTouchListener(onTouchListener);
+        mRlButton.setOnTouchListener(onTouchListener);
+        mRrButton.setOnTouchListener(onTouchListener);
+        mRuButton.setOnTouchListener(onTouchListener);
+        mRdButton.setOnTouchListener(onTouchListener);
     }
 
     private void initWifi() {
         WifiConfiguration conf = new WifiConfiguration();
-        conf.SSID = "\"" + getApplicationContext().getResources().getString(R.string.wifi_ssid) + "\"";
-        conf.preSharedKey = "\"" + getApplicationContext().getResources().getString(R.string.wifi_pass) + "\"";
+        conf.SSID = "\"" + getContext().getResources().getString(R.string.wifi_ssid) + "\"";
+        conf.preSharedKey = "\"" + getContext().getResources().getString(R.string.wifi_pass) + "\"";
 
-        mWifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+        mWifiManager = (WifiManager) getContext().getApplicationContext().getSystemService(Context.WIFI_SERVICE);
         if (!mWifiManager.isWifiEnabled()) {
             mWifiDisable = true;
             mWifiManager.setWifiEnabled(true);
@@ -248,7 +251,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onDestroy() {
+    public void onDestroy() {
         super.onDestroy();
         if (mUdpClient != null) {
             mUdpClient.stopClient();

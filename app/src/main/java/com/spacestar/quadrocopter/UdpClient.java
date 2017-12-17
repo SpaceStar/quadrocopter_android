@@ -1,6 +1,5 @@
 package com.spacestar.quadrocopter;
 
-import android.annotation.SuppressLint;
 import android.os.AsyncTask;
 import android.util.Log;
 
@@ -13,22 +12,19 @@ import java.net.UnknownHostException;
 
 public abstract class UdpClient {
 
-    private InetAddress SERVER_IP; //server IP address
-    private int SERVER_PORT;
-    private int PACKET_MAX_LENGTH;
+    private InetAddress mServerIp; //server IP address
+    private int mServerPort;
+    private int mPacketMaxLength;
     // UDP socket
-    private DatagramSocket socket;
+    private DatagramSocket mSocket;
 
-    /**
-     * Constructor of the class
-     */
-    public UdpClient(String ServerIP, int ServerPort, int InputMaxLength) {
+    public UdpClient(String serverIP, int serverPort, int inputMaxLength) {
         try {
-            SERVER_IP = InetAddress.getByName(ServerIP);
-            SERVER_PORT = ServerPort;
-            PACKET_MAX_LENGTH = InputMaxLength;
+            mServerIp = InetAddress.getByName(serverIP);
+            this.mServerPort = serverPort;
+            mPacketMaxLength = inputMaxLength;
 
-            start_client();
+            startClient();
         } catch (UnknownHostException e) {
             e.printStackTrace();
         }
@@ -44,12 +40,12 @@ public abstract class UdpClient {
     }
 
     public void sendBytes(byte[] data) {
-        if (socket != null) {
+        if (mSocket != null) {
             try {
-                DatagramPacket packet = new DatagramPacket(data, data.length, SERVER_IP, SERVER_PORT);
-                socket.send(packet);
+                DatagramPacket packet = new DatagramPacket(data, data.length, mServerIp, mServerPort);
+                mSocket.send(packet);
             } catch (IOException e) {
-                Log.e("Send", "Error while sending data");
+                Log.e("Send", "Error while sending mData");
             }
         }
     }
@@ -58,50 +54,54 @@ public abstract class UdpClient {
      * Close the connection and release the members
      */
     public void stopClient() {
-        //the socket must be closed. It is not possible to reconnect to this socket
-        // after it is closed, which means a new socket instance has to be created.
-        if (socket != null) {
-            socket.close();
+        //the mSocket must be closed. It is not possible to reconnect to this mSocket
+        // after it is closed, which means a new mSocket instance has to be created.
+        if (mSocket != null) {
+            mSocket.close();
         }
     }
 
-    private void start_client() {
-        @SuppressLint("StaticFieldLeak")
-        AsyncTask<Void, Integer, Void> asyncTask = new AsyncTask<Void, Integer, Void>() {
-            private byte[] data;
-
-            @Override
-            protected Void doInBackground(Void... voids) {
-                data = new byte[PACKET_MAX_LENGTH];
-                DatagramPacket packet = new DatagramPacket(data, data.length);
-
-                try {
-                    //connect
-                    socket = new DatagramSocket();
-                    //receive
-                    while (socket != null)
-                    {
-                        socket.receive(packet);
-                        publishProgress(packet.getLength());
-                    }
-                } catch (SocketException e) {
-                    e.printStackTrace();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-
-                return null;
-            }
-
-            @Override
-            protected void onProgressUpdate(Integer... values) {
-                super.onProgressUpdate(values);
-                onReceive(data, values[0]);
-            }
-        };
+    private void startClient() {
+        AsyncTask<Void, Integer, Void> asyncTask = new UdpTask(this);
         asyncTask.execute();
     }
 
     abstract public void onReceive(byte[] data, int size);
 
+    private static class UdpTask extends AsyncTask<Void, Integer, Void> {
+        private UdpClient mClient;
+        private byte[] mData;
+
+        public UdpTask(UdpClient client) {
+            mClient = client;
+        }
+
+        @Override
+        protected Void doInBackground(Void... voids) {
+            mData = new byte[mClient.mPacketMaxLength];
+            DatagramPacket packet = new DatagramPacket(mData, mData.length);
+
+            try {
+                //connect
+                mClient.mSocket = new DatagramSocket();
+                //receive
+                while (mClient.mSocket != null) {
+                    mClient.mSocket.receive(packet);
+                    publishProgress(packet.getLength());
+                }
+            } catch (SocketException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            return null;
+        }
+
+        @Override
+        protected void onProgressUpdate(Integer... values) {
+            super.onProgressUpdate(values);
+            mClient.onReceive(mData, values[0]);
+        }
+    }
 }

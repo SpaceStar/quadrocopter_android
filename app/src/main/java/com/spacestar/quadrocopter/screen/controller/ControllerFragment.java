@@ -27,15 +27,7 @@ import java.util.TimerTask;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 
-import static com.spacestar.quadrocopter.Consts.ADC_CONST;
-import static com.spacestar.quadrocopter.Consts.MAX_VOLTAGE;
-import static com.spacestar.quadrocopter.Consts.MIN_VOLTAGE;
-import static com.spacestar.quadrocopter.Consts.SERVER_IP;
-import static com.spacestar.quadrocopter.Consts.SERVER_PORT;
-import static com.spacestar.quadrocopter.Consts.SMALL_VOLTAGE;
-import static com.spacestar.quadrocopter.Consts.STATE_SIZE;
-import static com.spacestar.quadrocopter.Consts.UDP_PERIOD;
-import static com.spacestar.quadrocopter.Consts.WIFI_PERIOD;
+import static com.spacestar.quadrocopter.Consts.*;
 
 public class ControllerFragment extends BaseFragment {
 

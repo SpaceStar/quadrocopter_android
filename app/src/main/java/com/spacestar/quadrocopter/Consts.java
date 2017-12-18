@@ -13,6 +13,10 @@ public class Consts {
     public static final double MIN_VOLTAGE = 9;
     public static final double SMALL_VOLTAGE = 9.9;
 
+    public enum Channel {
+        GAS, YAW, PITCH, ROLL, OPTIONS
+    }
+
     private Consts() {
     }
 }

@@ -34,6 +34,10 @@ public abstract class UdpClient {
         }
     }
 
+    public UdpClient(int ServerPort, int InputMaxLength) {
+        this("192.168.0.1", ServerPort, InputMaxLength);
+    }
+
     /**
      * Sends the message entered by client to the server
      *
@@ -100,6 +104,14 @@ public abstract class UdpClient {
             }
         };
         asyncTask.execute();
+    }
+
+    public void ChangeServerIP(String ServerIP) {
+        try {
+            SERVER_IP = InetAddress.getByName(ServerIP);
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
     }
 
     abstract public void onReceive(byte[] data, int size);

@@ -1,8 +1,12 @@
 package com.spacestar.quadrocopter;
 
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
+import android.net.NetworkInfo;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
@@ -21,7 +25,6 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 public class MainActivity extends AppCompatActivity {
-    public static final String SERVER_IP = "192.168.1.1";
     public static final int SERVER_PORT = 8888;
 
     public static final long UDP_PERIOD = 50;
@@ -53,6 +56,7 @@ public class MainActivity extends AppCompatActivity {
     private Timer mUdpTimer;
     private Timer mWifiTimer;
     private WifiManager mWifiManager;
+    private BroadcastReceiver mBroadcastReceiver;
 
     byte state[];
 
@@ -74,7 +78,7 @@ public class MainActivity extends AppCompatActivity {
 
         state = new byte[STATE_SIZE];
 
-        mUdpClient = new UdpClient(SERVER_IP, SERVER_PORT, STATE_SIZE) {
+        mUdpClient = new UdpClient(SERVER_PORT, STATE_SIZE) {
             @Override
             public void onReceive(byte[] data, int size) {
                 int value = (0xff & data[0]) * 4 + (0xff & data[1]) / 64;
@@ -91,6 +95,20 @@ public class MainActivity extends AppCompatActivity {
                     mBatteryStateText.setTextColor(defaultTextColor);
             }
         };
+
+        mBroadcastReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                NetworkInfo networkInfo = intent.getParcelableExtra(WifiManager.EXTRA_NETWORK_INFO);
+                if (networkInfo.isConnected()) {
+                    int ip = mWifiManager.getDhcpInfo().serverAddress;
+                    mUdpClient.ChangeServerIP(String.format("%d.%d.%d.%d", (ip & 0xff), (ip >> 8 & 0xff), (ip >> 16 & 0xff),
+                            (ip >> 24 & 0xff)));
+                }
+            }
+        };
+        IntentFilter filter = new IntentFilter(WifiManager.NETWORK_STATE_CHANGED_ACTION);
+        registerReceiver(mBroadcastReceiver, filter);
 
         mUdpTimer = new Timer();
         mUdpTimer.scheduleAtFixedRate(new TimerTask() {
@@ -272,5 +290,6 @@ public class MainActivity extends AppCompatActivity {
         if (mWifiDisable) {
             mWifiManager.setWifiEnabled(false);
         }
+        unregisterReceiver(mBroadcastReceiver);
     }
 }
